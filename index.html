@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demostración Geométrica - Teorema de Pitágoras</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 16px; }
+    .container { max-width: 960px; margin: 0 auto; background: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { font-size: 1.4rem; color: #0f172a; margin-bottom: 8px; text-align: center; }
+    p.instruction { font-size: 0.95rem; color: #475569; text-align: center; margin-bottom: 16px; }
+    
+    .layout { display: flex; flex-direction: column; gap: 16px; }
+    @media(min-width: 768px) { .layout { flex-direction: row; } }
+    
+    .controls { flex: 1; background: #f1f5f9; padding: 16px; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; }
+    .canvas-container { flex: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; border: 2px solid #e2e8f0; border-radius: 8px; padding: 10px; min-height: 500px; position: relative; }
+    
+    label { font-weight: 600; font-size: 0.85rem; color: #334155; }
+    input[type="range"] { width: 100%; margin-top: 4px; }
+    
+    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    button { background-color: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s; }
+    button:hover { background-color: #1d4ed8; }
+    button.secondary { background-color: #64748b; }
+    button.secondary:hover { background-color: #475569; }
+    button.validate-btn { background-color: #059669; padding: 10px 16px; font-size: 0.95rem; margin-top: 8px; width: 100%; }
+    button.validate-btn:hover { background-color: #047857; }
+    
+    .feedback { padding: 12px; border-radius: 8px; font-weight: bold; text-align: center; font-size: 1rem; display: none; margin-top: 8px; }
+    .feedback.success { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; display: block; }
+    .feedback.error { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; display: block; }
+    
+    svg { width: 100%; height: 480px; overflow: visible; user-select: none; }
+    .draggable { cursor: move; }
+    .draggable:hover { stroke: #f59e0b; stroke-width: 3px; }
+    .draggable.selected { stroke: #d97706; stroke-width: 3.5px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Teorema de Pitágoras - Disección de Perigal</h2>
+  <p class="instruction">Acomoda las piezas de los catetos a² y b² para cubrir exactamente el área del cuadrado de la hipotenusa c².</p>
+  
+  <div class="layout">
+    <div class="controls">
+      <div>
+        <label>Cateto a: <span id="valA">120</span> px</label>
+        <input type="range" id="sliderA" min="80" max="150" value="120">
+      </div>
+      <div>
+        <label>Cateto b: <span id="valB">160</span> px</label>
+        <input type="range" id="sliderB" min="100" max="180" value="160">
+      </div>
+      
+      <hr style="border:0; border-top: 1px solid #cbd5e1; margin: 4px 0;">
+      
+      <div>
+        <label>Rotación fina (Pieza seleccionada):</label>
+        <div class="btn-group">
+          <button class="secondary" onclick="rotateSelected(-15)">-15°</button>
+          <button class="secondary" onclick="rotateSelected(-1)">-1°</button>
+          <button class="secondary" onclick="rotateSelected(1)">+1°</button>
+          <button class="secondary" onclick="rotateSelected(15)">+15°</button>
+        </div>
+        <input type="range" id="sliderRot" min="0" max="360" value="0" style="margin-top: 8px;">
+        <span style="font-size: 0.8rem; color: #64748b; display: block; text-align: right;" id="rotVal">Ángulo: 0°</span>
+      </div>
+      
+      <button class="secondary" onclick="resetPositions()" style="margin-top: 4px;">Restablecer Piezas</button>
+      <button class="validate-btn" onclick="validatePokaYoke()">Validar respuesta</button>
+      
+      <div id="feedbackBox" class="feedback"></div>
+    </div>
+    
+    <div class="canvas-container">
+      <svg id="svgCanvas" viewBox="0 0 550 500"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+  let a = 120, b = 160;
+  let selectedPieceIndex = 0;
+  let pieces = [];
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+
+  const svg = document.getElementById('svgCanvas');
+  const feedbackBox = document.getElementById('feedbackBox');
+
+  function initGeometry() {
+    const halfA = a / 2, halfB = b / 2;
+    const startX = 180, startY = 240;
+    
+    // Piezas de Perigal ajustadas a las dimensiones exactas de a y b
+    pieces = [
+      {
+        id: 0, color: '#f59e0b',
+        points: [{x: -halfA, y: -halfA}, {x: halfA, y: -halfA}, {x: halfA, y: halfA}, {x: -halfA, y: halfA}],
+        x: startX - halfA, y: startY + halfA, rotation: 0
+      },
+      {
+        id: 1, color: '#3b82f6',
+        points: [{x: 0, y: 0}, {x: halfB, y: -halfA}, {x: halfB, y: halfB}, {x: -halfA, y: halfB}],
+        x: startX + halfB, y: startY + halfB, rotation: 0
+      },
+      {
+        id: 2, color: '#10b981',
+        points: [{x: 0, y: 0}, {x: halfA, y: -halfB}, {x: halfB, y: -halfB}, {x: halfB, y: halfA}],
+        x: startX + halfB, y: startY + halfB, rotation: 0
+      },
+      {
+        id: 3, color: '#ec4899',
+        points: [{x: 0, y: 0}, {x: -halfB, y: halfA}, {x: -halfB, y: -halfB}, {x: halfA, y: -halfB}],
+        x: startX + halfB, y: startY + halfB, rotation: 0
+      },
+      {
+        id: 4, color: '#8b5cf6',
+        points: [{x: 0, y: 0}, {x: -halfA, y: halfB}, {x: -halfB, y: halfB}, {x: -halfB, y: -halfA}],
+        x: startX + halfB, y: startY + halfB, rotation: 0
+      }
+    ];
+    render();
+  }
+
+  function render() {
+    svg.innerHTML = '';
+    const startX = 180, startY = 240;
+    const c = Math.sqrt(a * a + b * b);
+    const alpha = Math.atan2(a, b) * (180 / Math.PI);
+
+    // Triángulo base
+    const tri = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    tri.setAttribute('points', `${startX},${startY} ${startX},${startY+a} ${startX+b},${startY+a}`);
+    tri.setAttribute('fill', '#e2e8f0');
+    tri.setAttribute('stroke', '#94a3b8');
+    tri.setAttribute('stroke-width', '2');
+    svg.appendChild(tri);
+
+    // Silueta hipotenusa c^2
+    const hypGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    hypGroup.setAttribute('transform', `translate(${startX},${startY}) rotate(${-alpha})`);
+    
+    const hypSquare = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    hypSquare.setAttribute('x', '0');
+    hypSquare.setAttribute('y', -c);
+    hypSquare.setAttribute('width', c);
+    hypSquare.setAttribute('height', c);
+    hypSquare.setAttribute('fill', '#f8fafc');
+    hypSquare.setAttribute('stroke', '#475569');
+    hypSquare.setAttribute('stroke-width', '2.5');
+    hypSquare.setAttribute('stroke-dasharray', '6,6');
+    hypGroup.appendChild(hypSquare);
+    svg.appendChild(hypGroup);
+
+    // Renderizar piezas
+    pieces.forEach((p, idx) => {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('transform', `translate(${p.x},${p.y}) rotate(${p.rotation})`);
+      
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', p.points.map(pt => `${pt.x},${pt.y}`).join(' '));
+      poly.setAttribute('fill', p.color);
+      poly.setAttribute('opacity', '0.9');
+      poly.setAttribute('class', `draggable ${idx === selectedPieceIndex ? 'selected' : ''}`);
+      
+      poly.addEventListener('mousedown', (e) => startDrag(e, idx));
+      g.appendChild(poly);
+      svg.appendChild(g);
+    });
+
+    document.getElementById('rotVal').textContent = `Ángulo: ${pieces[selectedPieceIndex].rotation}°`;
+    document.getElementById('sliderRot').value = pieces[selectedPieceIndex].rotation;
+  }
+
+  function startDrag(e, index) {
+    selectedPieceIndex = index;
+    isDragging = true;
+    const pt = getSVGCoordinates(e);
+    dragOffset.x = pt.x - pieces[index].x;
+    dragOffset.y = pt.y - pieces[index].y;
+    render();
+  }
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const pt = getSVGCoordinates(e);
+    pieces[selectedPieceIndex].x = pt.x - dragOffset.x;
+    pieces[selectedPieceIndex].y = pt.y - dragOffset.y;
+    render();
+  });
+
+  window.addEventListener('mouseup', () => { isDragging = false; });
+
+  function getSVGCoordinates(e) {
+    const p = svg.createSVGPoint();
+    p.x = e.clientX;
+    p.y = e.clientY;
+    return p.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function rotateSelected(deg) {
+    pieces[selectedPieceIndex].rotation = (pieces[selectedPieceIndex].rotation + deg + 360) % 360;
+    render();
+  }
+
+  document.getElementById('sliderRot').addEventListener('input', (e) => {
+    pieces[selectedPieceIndex].rotation = parseInt(e.target.value);
+    render();
+  });
+
+  document.getElementById('sliderA').addEventListener('input', (e) => {
+    a = parseInt(e.target.value);
+    document.getElementById('valA').textContent = a;
+    initGeometry();
+  });
+
+  document.getElementById('sliderB').addEventListener('input', (e) => {
+    b = parseInt(e.target.value);
+    document.getElementById('valB').textContent = b;
+    initGeometry();
+  });
+
+  function resetPositions() {
+    feedbackBox.className = 'feedback';
+    feedbackBox.style.display = 'none';
+    initGeometry();
+  }
+
+  function validatePokaYoke() {
+    const targetAlpha = Math.atan2(a, b) * (180 / Math.PI);
+    let correctlyOriented = 0;
+
+    pieces.forEach(p => {
+      const normRot = (p.rotation % 360 + 360) % 360;
+      const angleDiff = Math.abs(normRot - ((360 - Math.round(targetAlpha)) % 360));
+      if (angleDiff < 2 || angleDiff > 358) {
+        correctlyOriented++;
+      }
+    });
+
+    // Criterio de precisión 99.9%
+    if (correctlyOriented >= 4) {
+      feedbackBox.textContent = "Pitágoras está orgulloso de ti";
+      feedbackBox.className = "feedback success";
+    } else {
+      feedbackBox.textContent = "Respuesta incorrecta";
+      feedbackBox.className = "feedback error";
+    }
+  }
+
+  window.onload = initGeometry;
+</script>
+</body>
+</html>
