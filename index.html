@@ -42,17 +42,17 @@
 
 <div class="container">
   <h2>Teorema de Pitágoras - Disección de Perigal</h2>
-  <p class="instruction">Acomoda las piezas de los catetos a² y b² para cubrir exactamente el área del cuadrado de la hipotenusa c².</p>
+  <p class="instruction">Arrastra las piezas de a² y b² para cubrir exactamente el área del cuadrado de la hipotenusa c².</p>
   
   <div class="layout">
     <div class="controls">
       <div>
-        <label>Cateto a: <span id="valA">120</span> px</label>
-        <input type="range" id="sliderA" min="80" max="150" value="120">
+        <label>Cateto a: <span id="valA">100</span> px</label>
+        <input type="range" id="sliderA" min="60" max="130" value="100">
       </div>
       <div>
         <label>Cateto b: <span id="valB">160</span> px</label>
-        <input type="range" id="sliderB" min="100" max="180" value="160">
+        <input type="range" id="sliderB" min="140" max="200" value="160">
       </div>
       
       <hr style="border:0; border-top: 1px solid #cbd5e1; margin: 4px 0;">
@@ -82,7 +82,7 @@
 </div>
 
 <script>
-  let a = 120, b = 160;
+  let a = 100, b = 160;
   let selectedPieceIndex = 0;
   let pieces = [];
   let isDragging = false;
@@ -92,41 +92,42 @@
   const feedbackBox = document.getElementById('feedbackBox');
 
   function initGeometry() {
-    const halfA = a / 2, halfB = b / 2;
-    const startX = 180, startY = 240;
+    const halfA = a / 2;
+    const halfB = b / 2;
+    const startX = 160, startY = 240;
     
-    // Disección exacta de Perigal:
-    // Cuadrado a^2 entero + 4 piezas congruentes construidas a partir de cortes
-    // paralelos y perpendiculares a la hipotenusa en el centro de b^2.
-    const x = halfA; // Desplazamiento de corte según la geometría exacta de Perigal
-    const y = halfA;
-
+    // Cálculo estricto de Perigal
+    const u = (b - a) / 2;
+    const v = (b + a) / 2;
+    
+    // Coordenadas de las 4 piezas congruentes de b^2 alrededor del centro (0,0)
+    // Cada cuadrilátero combina dimensiones u y v para que la suma total sea exactamente b^2
     pieces = [
-      // Pieza 0: Cuadrado a^2 (Área = a^2)
+      // Pieza 0: Cuadrado a^2 entero
       {
         id: 0, color: '#f59e0b',
         points: [{x: -halfA, y: -halfA}, {x: halfA, y: -halfA}, {x: halfA, y: halfA}, {x: -halfA, y: halfA}],
         x: startX - halfA, y: startY + halfA, rotation: 0
       },
-      // Piezas 1 a 4: Cuadriláteros de Perigal sobre b^2 (Área total = b^2)
+      // 4 Cuadriláteros congruentes de b^2
       {
         id: 1, color: '#3b82f6',
-        points: [{x: 0, y: 0}, {x: halfB, y: -y}, {x: halfB, y: halfB}, {x: -x, y: halfB}],
+        points: [{x: 0, y: 0}, {x: v/2, y: -u/2}, {x: halfB, y: halfB}, {x: -u/2, y: v/2}],
         x: startX + halfB, y: startY + halfB, rotation: 0
       },
       {
         id: 2, color: '#10b981',
-        points: [{x: 0, y: 0}, {x: x, y: -halfB}, {x: halfB, y: -halfB}, {x: halfB, y: y}],
+        points: [{x: 0, y: 0}, {x: u/2, y: -v/2}, {x: halfB, y: -halfB}, {x: v/2, y: u/2}],
         x: startX + halfB, y: startY + halfB, rotation: 0
       },
       {
         id: 3, color: '#ec4899',
-        points: [{x: 0, y: 0}, {x: -halfB, y: y}, {x: -halfB, y: -halfB}, {x: x, y: -halfB}],
+        points: [{x: 0, y: 0}, {x: -v/2, y: u/2}, {x: -halfB, y: -halfB}, {x: u/2, y: -v/2}],
         x: startX + halfB, y: startY + halfB, rotation: 0
       },
       {
         id: 4, color: '#8b5cf6',
-        points: [{x: 0, y: 0}, {x: -x, y: halfB}, {x: -halfB, y: halfB}, {x: -halfB, y: -y}],
+        points: [{x: 0, y: 0}, {x: -u/2, y: v/2}, {x: -halfB, y: halfB}, {x: -v/2, y: -u/2}],
         x: startX + halfB, y: startY + halfB, rotation: 0
       }
     ];
@@ -135,7 +136,7 @@
 
   function render() {
     svg.innerHTML = '';
-    const startX = 180, startY = 240;
+    const startX = 160, startY = 240;
     const c = Math.sqrt(a * a + b * b);
     const alpha = Math.atan2(a, b) * (180 / Math.PI);
 
@@ -147,7 +148,7 @@
     tri.setAttribute('stroke-width', '2');
     svg.appendChild(tri);
 
-    // Silueta hipotenusa c^2 (Área exacta = a^2 + b^2)
+    // Silueta hipotenusa c^2
     const hypGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     hypGroup.setAttribute('transform', `translate(${startX},${startY}) rotate(${-alpha})`);
     
@@ -163,13 +164,13 @@
     hypGroup.appendChild(hypSquare);
     svg.appendChild(hypGroup);
 
-    // Renderizar piezas
+    // Renderizar las 5 piezas
     pieces.forEach((p, idx) => {
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('transform', `translate(${p.x},${p.y}) rotate(${p.rotation})`);
       
       const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-      poly.setAttribute('points', p.points.map(pt => `${pt.x},${pt.y}`).join(' '));
+      poly.setAttribute('points', p.points.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' '));
       poly.setAttribute('fill', p.color);
       poly.setAttribute('opacity', '0.9');
       poly.setAttribute('class', `draggable ${idx === selectedPieceIndex ? 'selected' : ''}`);
@@ -249,7 +250,6 @@
       }
     });
 
-    // Criterio de precisión 99.9%
     if (correctlyOriented >= 4) {
       feedbackBox.textContent = "Pitágoras está orgulloso de ti";
       feedbackBox.className = "feedback success";
